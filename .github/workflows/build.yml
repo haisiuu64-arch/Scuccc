@@ -1,29 +1,59 @@
 
-      - name: Locate Gradle project
+name: Build SpruceAutoFarm
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Extract ZIP
         run: |
-          echo "Danh sach file trong ZIP:"
-          find source -maxdepth 4 -type f | head -n 100
+          unzip -o "SpruceAutoFarmv3full (1).zip" -d source
 
-          GRADLE_FILE=$(find source -type f \( -name gradlew -o -name build.gradle -o -name build.gradle.kts \) | head -n 1)
+      - name: Inspect ZIP contents
+        run: |
+          echo "=== FILE LIST ==="
+          find source -maxdepth 5 -type f | head -n 150
+          echo "=== GRADLE FILES ==="
+          find source -type f \( -name gradlew -o -name build.gradle -o -name build.gradle.kts -o -name settings.gradle -o -name settings.gradle.kts \)
 
-          if [ -z "$GRADLE_FILE" ]; then
-            echo "Khong tim thay file Gradle"
+      - name: Stop if Gradle project is missing
+        run: |
+          if ! find source -type f \( -name build.gradle -o -name build.gradle.kts \) | grep -q .; then
+            echo "Khong tim thay build.gradle trong ZIP"
+            exit 1
+          fi
+          if ! find source -type f -name gradlew | grep -q .; then
+            echo "Du an chua co Gradle Wrapper"
             exit 1
           fi
 
-          echo "Tim thay: $GRADLE_FILE"
-
-      - name: Build Minecraft Mod
+      - name: Build Mod
         run: |
-          GRADLE_WRAPPER=$(find source -type f -name gradlew | head -n 1)
+          GRADLE_FILE=$(find source -type f -name gradlew | head -n 1)
+          PROJECT_DIR=$(dirname "$GRADLE_FILE")
+          cd "$PROJECT_DIR"
+          chmod +x gradlew
+          ./gradlew build
 
-          if [ -n "$GRADLE_WRAPPER" ]; then
-            PROJECT_DIR=$(dirname "$GRADLE_WRAPPER")
-            cd "$PROJECT_DIR"
-            chmod +x gradlew
-            ./gradlew build
-          else
-            echo "ZIP khong co gradlew."
-            echo "Can kiem tra cau hinh Gradle truoc khi build."
-            exit 1
-          fi
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: SpruceAutoFarm-JAR
+          path: source/**/build/libs/*.jar
+          if-no-files-found: error
