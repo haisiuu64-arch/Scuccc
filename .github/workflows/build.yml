@@ -7,26 +7,31 @@ on:
     branches:
       - main
 
-permissions:
-  contents: read
-
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java 21
-        uses: actions/setup-java@v4
+      - name: Setup Java
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
-          cache: gradle
 
-      - name: Build Minecraft Mod
+      - name: Extract source ZIP
         run: |
+          unzip -o SpruceAutoFarmv3full.zip -d source
+
+      - name: Find Gradle project
+        run: |
+          find . -name gradlew -type f
+
+      - name: Build Mod
+        run: |
+          cd source
           chmod +x gradlew
           ./gradlew build
 
@@ -34,5 +39,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: SpruceAutoFarm-JAR
-          path: '**/build/libs/*.jar'
+          path: source/**/build/libs/*.jar
           if-no-files-found: error
+
