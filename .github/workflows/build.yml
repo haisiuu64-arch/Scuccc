@@ -9,11 +9,11 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -27,7 +27,7 @@ jobs:
 
       - name: Find Gradle project
         run: |
-          find . -name gradlew -type f
+          find source -name gradlew -type f
 
       - name: Build Mod
         run: |
@@ -41,4 +41,3 @@ jobs:
           name: SpruceAutoFarm-JAR
           path: source/**/build/libs/*.jar
           if-no-files-found: error
-
