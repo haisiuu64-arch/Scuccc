@@ -1,57 +1,29 @@
 
-name: Build SpruceAutoFarm
-
-on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
-
-permissions:
-  contents: read
-
-jobs:
-  build:
-    runs-on: ubuntu-24.04
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Java 21
-        uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: '21'
-
-      - name: Check ZIP file
+      - name: Locate Gradle project
         run: |
-          ls -lah
-          test -f "SpruceAutoFarmv3full (1).zip"
+          echo "Danh sach file trong ZIP:"
+          find source -maxdepth 4 -type f | head -n 100
 
-      - name: Extract source ZIP
-        run: |
-          unzip -o "SpruceAutoFarmv3full (1).zip" -d source
+          GRADLE_FILE=$(find source -type f \( -name gradlew -o -name build.gradle -o -name build.gradle.kts \) | head -n 1)
 
-      - name: Locate Gradle wrapper
-        run: |
-          find source -type f -name gradlew
+          if [ -z "$GRADLE_FILE" ]; then
+            echo "Khong tim thay file Gradle"
+            exit 1
+          fi
+
+          echo "Tim thay: $GRADLE_FILE"
 
       - name: Build Minecraft Mod
         run: |
-          GRADLE_FILE=$(find source -type f -name gradlew | head -n 1)
-          if [ -z "$GRADLE_FILE" ]; then
-            echo "ERROR: Không tìm thấy gradlew trong ZIP"
+          GRADLE_WRAPPER=$(find source -type f -name gradlew | head -n 1)
+
+          if [ -n "$GRADLE_WRAPPER" ]; then
+            PROJECT_DIR=$(dirname "$GRADLE_WRAPPER")
+            cd "$PROJECT_DIR"
+            chmod +x gradlew
+            ./gradlew build
+          else
+            echo "ZIP khong co gradlew."
+            echo "Can kiem tra cau hinh Gradle truoc khi build."
             exit 1
           fi
-          PROJECT_DIR=$(dirname "$GRADLE_FILE")
-          cd "$PROJECT_DIR"
-          chmod +x gradlew
-          ./gradlew build
-
-      - name: Upload JAR
-        uses: actions/upload-artifact@v4
-        with:
-          name: SpruceAutoFarm-JAR
-          path: source/**/build/libs/*.jar
-          if-no-files-found: error
