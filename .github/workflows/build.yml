@@ -21,35 +21,30 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Extract ZIP
         run: |
           unzip -o "SpruceAutoFarmv3full (1).zip" -d source
 
-      - name: Inspect ZIP contents
+      - name: Find Gradle project
+        id: project
         run: |
-          echo "=== FILE LIST ==="
-          find source -maxdepth 5 -type f | head -n 150
-          echo "=== GRADLE FILES ==="
-          find source -type f \( -name gradlew -o -name build.gradle -o -name build.gradle.kts -o -name settings.gradle -o -name settings.gradle.kts \)
+          BUILD_FILE=$(find source -type f \( -name build.gradle -o -name build.gradle.kts \) | head -n 1)
 
-      - name: Stop if Gradle project is missing
-        run: |
-          if ! find source -type f \( -name build.gradle -o -name build.gradle.kts \) | grep -q .; then
-            echo "Khong tim thay build.gradle trong ZIP"
+          if [ -z "$BUILD_FILE" ]; then
+            echo "Khong tim thay build.gradle"
+            find source -maxdepth 4 -type f | head -n 150
             exit 1
           fi
-          if ! find source -type f -name gradlew | grep -q .; then
-            echo "Du an chua co Gradle Wrapper"
-            exit 1
-          fi
+
+          echo "dir=$(dirname "$BUILD_FILE")" >> "$GITHUB_OUTPUT"
 
       - name: Build Mod
         run: |
-          GRADLE_FILE=$(find source -type f -name gradlew | head -n 1)
-          PROJECT_DIR=$(dirname "$GRADLE_FILE")
-          cd "$PROJECT_DIR"
-          chmod +x gradlew
-          ./gradlew build
+          cd "${{ steps.project.outputs.dir }}"
+          gradle build
 
       - name: Upload JAR
         uses: actions/upload-artifact@v4
